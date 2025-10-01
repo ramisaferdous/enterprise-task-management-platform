@@ -1,11 +1,12 @@
 import api from "./axios";
 
 export const loginApi = async (payload) => {
-  const { data } = await api.post("/auth/login", payload);
-  return data; 
-};
-
-export const registerApi = async (payload) => {
-  const { data } = await api.post("/auth/register", payload);
-  return data;
+  try {
+    const { data } = await api.post("/auth/login", payload);
+    return data; 
+  } catch (err) {
+   
+    const msg = err?.response?.data?.msg || "Login failed";
+    throw new Error(msg);
+  }
 };
