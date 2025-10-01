@@ -1,33 +1,54 @@
-const { Sequelize } = require('sequelize');
-const mongoose = require('mongoose');
-require('dotenv').config();
+const { Sequelize } = require("sequelize");
+const mongoose = require("mongoose");
 
-// PostgreSQL
+const pgHost = process.env.POSTGRES_HOST;
+const pgPort = Number(process.env.POSTGRES_PORT || 5432);
+const pgDb   = process.env.POSTGRES_DB;
+const pgUser = process.env.POSTGRES_USER;
+const pgPass = process.env.POSTGRES_PASSWORD;
 
+const sequelize = new Sequelize(pgDb, pgUser, pgPass, {
+  host: pgHost,
+  port: pgPort,
+  dialect: "postgres",
+  logging: false,
+});
 
-
-const sequelize = new Sequelize(
-  process.env.POSTGRES_DB,
-  process.env.POSTGRES_USER,
-  process.env.POSTGRES_PASSWORD,
-  {
-    host: process.env.POSTGRES_HOST,
-    port: process.env.POSTGRES_PORT,
-    dialect: 'postgres',
-  }
-);
-
-// MongoDB
-const connectMongo = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log("MongoDB connected");
-  } catch (err) {
-    console.error("MongoDB connection error", err);
+const connectSQL = async (retries = 12, delayMs = 2500) => {
+  // Log what we’re trying (no secrets)
+  console.log(`Trying Postgres @ ${pgHost}:${pgPort}/${pgDb} as ${pgUser}`);
+  while (retries) {
+    try {
+      await sequelize.authenticate();
+      console.log("Postgres connected");
+      await sequelize.sync(); // { alter:true } only for dev
+      console.log("Postgres synced");
+      return;
+    } catch (e) {
+      retries -= 1;
+      console.error(`Postgres connect failed (${retries} left):`, e.message);
+      if (!retries) throw e;
+      await new Promise(r => setTimeout(r, delayMs));
+    }
   }
 };
 
-module.exports = { sequelize, connectMongo };
+const mongoUri = process.env.MONGO_URI;
+
+const connectMongo = async (retries = 12, delayMs = 2500) => {
+  console.log(`Trying Mongo @ ${mongoUri}`);
+  while (retries) {
+    try {
+      await mongoose.connect(mongoUri);
+      console.log("MongoDB connected");
+      return;
+    } catch (e) {
+      retries -= 1;
+      console.error(`Mongo connect failed (${retries} left):`, e.message);
+      if (!retries) throw e;
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+};
+
+module.exports = { sequelize, connectSQL, connectMongo };

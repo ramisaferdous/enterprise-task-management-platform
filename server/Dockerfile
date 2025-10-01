@@ -1,19 +1,14 @@
-FROM node:18
+FROM node:20-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json
+# Install deps with cache
 COPY package*.json ./
+RUN npm ci --omit=dev
 
-# Install dependencies
-RUN npm install
-
-# Copy the rest of the app
+# Copy the rest
 COPY . .
 
-# Expose backend port
+# Expose and start
 EXPOSE 5000
-
-# Start the app
 CMD ["npm", "start"]
