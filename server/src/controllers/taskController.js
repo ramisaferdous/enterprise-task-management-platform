@@ -1,39 +1,50 @@
+// server/src/controllers/taskController.js
+const mongoose = require("mongoose");
 const Task = require("../models/task");
+const Project = require("../models/project");
 const AuditLog = require("../models/auditLog");
 
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(String(id));
+
 async function canAccessProject(userId, projectId) {
-  const p = await Project.findOne({
+  if (!isValidObjectId(projectId)) return false;
+
+  const project = await Project.findOne({
     _id: projectId,
-    $or: [{ ownerId: userId }, { members: userId }],
-  });
-  return !!p;
+    $or: [{ ownerId: Number(userId) }, { members: Number(userId) }],
+  }).select("_id");
+
+  return !!project;
 }
 
 exports.createTask = async (req, res) => {
   try {
     const { title, description, projectId, assignedTo, priority, dueDate } = req.body;
 
-    const ok = await canAccessProject(req.user.id, projectId);
-    if (!ok) return res.status(403).json({ msg: "Forbidden" });
+    if (!title || !projectId) {
+      return res.status(400).json({ msg: "title and projectId are required" });
+    }
+    if (!(await canAccessProject(req.user.id, projectId))) {
+      return res.status(403).json({ msg: "Forbidden" });
+    }
 
     const task = new Task({
-      title,
-      description,
+      title: title.trim(),
+      description: (description || "").trim(),
       projectId,
-      assignedTo,
-      priority,
-      dueDate,
+      assignedTo: assignedTo != null ? Number(assignedTo) : undefined,
+      priority: priority || "medium",
+      dueDate: dueDate ? new Date(dueDate) : undefined,
     });
 
     await task.save();
 
-   
     await AuditLog.create({
       userId: req.user.id,
       action: "CREATE",
       entity: "Task",
       entityId: task._id,
-      details: { title, projectId, assignedTo },
+      details: { title: task.title, projectId, assignedTo: task.assignedTo },
     });
 
     res.status(201).json(task);
@@ -45,18 +56,18 @@ exports.createTask = async (req, res) => {
 exports.getTasks = async (req, res) => {
   try {
     const projects = await Project.find({
-      $or: [{ ownerId: req.user.id }, { members: req.user.id }],
+      $or: [{ ownerId: Number(req.user.id) }, { members: Number(req.user.id) }],
     }).select("_id");
 
-    const projectIds = projects.map(p => p._id);
-    const tasks = await Task.find({ projectId: { $in: projectIds } }).sort({ updatedAt: -1 });
+    const projectIds = projects.map((p) => p._id);
+    const tasks = await Task.find({ projectId: { $in: projectIds } })
+      .sort({ updatedAt: -1 });
 
-   
     await AuditLog.create({
       userId: req.user.id,
       action: "READ",
       entity: "Task",
-      details: { count: tasks.length },
+      details: { scope: "allAccessible", count: tasks.length },
     });
 
     res.json(tasks);
@@ -70,10 +81,23 @@ exports.updateTaskStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const task = await Task.findByIdAndUpdate(id, { status }, { new: true });
+    const allowed = ["todo", "in-progress", "done"];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ msg: "Invalid status" });
+    }
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ msg: "Invalid task id" });
+    }
+
+    const task = await Task.findById(id);
     if (!task) return res.status(404).json({ msg: "Task not found" });
 
-    
+    const ok = await canAccessProject(req.user.id, task.projectId);
+    if (!ok) return res.status(403).json({ msg: "Forbidden" });
+
+    task.status = status;
+    await task.save();
+
     await AuditLog.create({
       userId: req.user.id,
       action: "UPDATE_STATUS",
@@ -91,17 +115,21 @@ exports.updateTaskStatus = async (req, res) => {
 exports.getTasksByProject = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const ok = await canAccessProject(req.user.id, projectId);
-    if (!ok) return res.status(403).json({ msg: "Forbidden" });
+
+    if (!isValidObjectId(projectId)) {
+      return res.status(400).json({ msg: "Invalid project id" });
+    }
+    if (!(await canAccessProject(req.user.id, projectId))) {
+      return res.status(403).json({ msg: "Forbidden" });
+    }
 
     const tasks = await Task.find({ projectId }).sort({ updatedAt: -1 });
-
 
     await AuditLog.create({
       userId: req.user.id,
       action: "READ",
       entity: "Task",
-      details: { projectId, count: tasks.length },
+      details: { scope: "byProject", projectId, count: tasks.length },
     });
 
     res.json(tasks);

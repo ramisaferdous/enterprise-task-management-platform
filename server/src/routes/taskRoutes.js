@@ -10,9 +10,10 @@ const {
 
 router.use(authMiddleware());  
 
-router.post("/", createTask);
 router.get("/", getTasks);
-router.patch("/:id/status", updateTaskStatus);
 router.get("/project/:projectId", getTasksByProject);
+router.post("/", createTask);
+router.patch("/:id/status", updateTaskStatus);
+
 
 module.exports = router;
