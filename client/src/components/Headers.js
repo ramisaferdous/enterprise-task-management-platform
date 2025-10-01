@@ -14,7 +14,9 @@ export default function Header() {
       <div>
         {user ? (
           <>
-            <span style={{ marginRight: 12 }}>{user.name} ({user.role})</span>
+            <span style={{ marginRight: 12 }}>
+              {(user.name || user.email || `User #${user.id}`)} ({user.role})
+            </span>
             <button onClick={() => { logout(); history.push("/login"); }}>
               Logout
             </button>
