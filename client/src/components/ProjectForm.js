@@ -2,13 +2,13 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createTaskApi } from "../api/tasks";
 
 const schema = z.object({
   title: z.string().min(2, "Title required"),
   description: z.string().optional(),
-  members: z.string().optional(),
+  members: z.string().optional(),            // comma separated numbers
 
+  // optional first task fields
   taskTitle: z.string().optional(),
   taskDescription: z.string().optional(),
   taskPriority: z.enum(["low", "medium", "high"]).optional(),
@@ -21,73 +21,109 @@ export default function ProjectForm({ onCreate, creating }) {
     handleSubmit,
     formState: { errors },
     reset,
-    watch,
   } = useForm({ resolver: zodResolver(schema) });
-
-  const hasFirstTask =
-    !!watch("taskTitle") ||
-    !!watch("taskDescription") ||
-    !!watch("taskPriority") ||
-    !!watch("taskDue");
 
   const submit = async (d) => {
     const members = d.members
-      ? d.members.split(",").map((s) => Number(s.trim())).filter(Boolean)
+      ? d.members
+          .split(",")
+          .map((s) => Number(s.trim()))
+          .filter(Boolean)
       : [];
 
-    const project = await onCreate({
-      title: d.title.trim(),
-      description: (d.description || "").trim(),
+    const payload = {
+      title: d.title,
+      description: d.description || "",
       members,
-    });
+      // optional “first task” payload (your controller can ignore if title is empty)
+      firstTask: d.taskTitle
+        ? {
+            title: d.taskTitle,
+            description: d.taskDescription || "",
+            priority: d.taskPriority || "medium",
+            dueDate: d.taskDue || null,
+          }
+        : undefined,
+    };
 
-    if (project?._id && hasFirstTask && d.taskTitle) {
-      await createTaskApi({
-        title: d.taskTitle.trim(),
-        description: (d.taskDescription || "").trim(),
-        projectId: project._id,
-        priority: d.taskPriority || "medium",
-        dueDate: d.taskDue || null,
-      });
-    }
-
+    await onCreate(payload);
     reset();
   };
 
   return (
-    <form onSubmit={handleSubmit(submit)} className="card">
-      <h3 style={{ marginTop: 0 }}>Create a project</h3>
+    <form onSubmit={handleSubmit(submit)} className="card formGrid">
+      <h3 className="sectionTitle">Create a project</h3>
 
-      <input placeholder="Project title" {...register("title")} />
-      {errors.title && <small className="err">{errors.title.message}</small>}
+      {/* Project basics */}
+      <div className="grid twoCol">
+        <div>
+          <label className="label">Project title</label>
+          <input className="input" {...register("title")} />
+          {errors.title && (
+            <small className="err">{errors.title.message}</small>
+          )}
+        </div>
 
-      <textarea placeholder="Description (optional)" rows={3} {...register("description")} />
+        <div>
+          <label className="label">Members (user IDs, comma-separated)</label>
+          <input
+            className="input"
+            placeholder="e.g. 1, 2"
+            {...register("members")}
+          />
+        </div>
 
-      <input placeholder="Members (user IDs, comma-separated)" {...register("members")} />
-
-      <hr />
-
-      <div className="row" style={{ alignItems: "center" }}>
-        <h4 style={{ margin: 0 }}>Optional: add your first task</h4>
-        <span className="muted" style={{ marginLeft: 8 }}>(will be created after the project)</span>
+        <div className="fullCol">
+          <label className="label">Description (optional)</label>
+          <textarea
+            className="textarea"
+            rows={3}
+            placeholder="What is this project about?"
+            {...register("description")}
+          />
+        </div>
       </div>
 
-      <input placeholder="Task title" {...register("taskTitle")} />
-      <textarea placeholder="Task description" rows={2} {...register("taskDescription")} />
+      <hr className="sep" />
 
-      <div className="row">
-        <select {...register("taskPriority")}>
-          <option value="">Priority (default: medium)</option>
-          <option>low</option>
-          <option>medium</option>
-          <option>high</option>
-        </select>
-        <input type="date" {...register("taskDue")} />
+      {/* Optional first task */}
+      <div className="sectionTitle">
+        Optional: add your first task{" "}
+        <small className="muted">(created right after the project)</small>
       </div>
 
-      <button type="submit" disabled={creating} className="btn-primary">
-        {creating ? "Creating..." : "Create Project"}
-      </button>
+      <div className="grid twoCol">
+        <div>
+          <label className="label">Task title</label>
+          <input className="input" {...register("taskTitle")} />
+        </div>
+
+        <div className="row" style={{ gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <label className="label">Priority</label>
+            <select className="select" defaultValue="medium" {...register("taskPriority")}>
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label className="label">Due date</label>
+            <input className="input" type="date" {...register("taskDue")} />
+          </div>
+        </div>
+
+        <div className="fullCol">
+          <label className="label">Task description</label>
+          <textarea className="textarea" rows={3} {...register("taskDescription")} />
+        </div>
+      </div>
+
+      <div className="row" style={{ justifyContent: "flex-end" }}>
+        <button className="btn primary" type="submit" disabled={creating}>
+          {creating ? "Creating…" : "Create Project"}
+        </button>
+      </div>
     </form>
   );
 }

@@ -19,11 +19,15 @@ export default function Projects() {
     onSuccess: () => qc.invalidateQueries("projects"),
   });
 
-  const onCreate = (payload) => createMutation.mutateAsync(payload);
-
+  const onCreate = async (payload) => {
+  const created = await createMutation.mutateAsync(payload);
+  
+  return created;
+};
+<ProjectForm onCreate={onCreate} creating={createMutation.isLoading} />
   return (
     <div className="container">
-      {/* Page title */}
+     
       <div style={{ margin: "10px 0 18px" }}>
         <h2 style={{ margin: 0 }}>Your Projects</h2>
         <p className="muted" style={{ marginTop: 6 }}>
@@ -31,7 +35,7 @@ export default function Projects() {
         </p>
       </div>
 
-      {/* Create form for managers/admins */}
+     
       {(user?.role === "admin" || user?.role === "manager") && (
         <div className="card" style={{ marginBottom: 18 }}>
           <div style={{ marginBottom: 8, fontWeight: 600 }}>Create a project</div>
@@ -39,7 +43,7 @@ export default function Projects() {
         </div>
       )}
 
-      {/* Projects grid */}
+      
       {isLoading ? (
         <div className="card">Loading projects…</div>
       ) : projects.length === 0 ? (
