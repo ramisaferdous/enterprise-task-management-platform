@@ -21,6 +21,11 @@ exports.createTask = async (req, res) => {
   }
 };
 
+exports.getTasks = async (req, res) => {
+
+  const tasks = await Task.find();
+  res.json(tasks);
+};
 
 exports.updateTaskStatus = async (req, res) => {
   try {
