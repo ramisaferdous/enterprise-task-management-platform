@@ -1,41 +1,31 @@
-import React from "react";
-import { useHistory } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { loginApi } from "../api/auth";
-import { useAuth } from "../context/AuthContext";
-
-const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
+import { useHistory } from "react-router-dom";
 
 export default function Login() {
+  const { register, handleSubmit } = useForm();
+  const { login } = useContext(AuthContext);
   const history = useHistory();
-  const { login } = useAuth();
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
-    resolver: zodResolver(schema),
-  });
 
   const onSubmit = async (v) => {
-    const data = await loginApi(v);
-    login(data); 
-    history.push("/projects");
+    try {
+      const data = await loginApi({ email: v.email.trim().toLowerCase(), password: v.password });
+      login(data);              // saves token + user
+      history.push("/projects");
+    } catch (e) {
+      alert(e.message);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
   };
 
   return (
-    <div style={{ maxWidth: 380, margin: "40px auto" }}>
-      <h2>Sign in</h2>
-      <form onSubmit={handleSubmit(onSubmit)} style={{ display:"grid", gap:10 }}>
-        <input placeholder="Email" {...register("email")} />
-        {errors.email && <small style={{color:"crimson"}}>{errors.email.message}</small>}
-        <input placeholder="Password" type="password" {...register("password")} />
-        {errors.password && <small style={{color:"crimson"}}>{errors.password.message}</small>}
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Signing in..." : "Login"}
-        </button>
-      </form>
-    </div>
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register("email", { required: true })} placeholder="Email" type="email" autoComplete="email" />
+      <input {...register("password", { required: true })} placeholder="Password" type="password" autoComplete="current-password" />
+      <button type="submit">Login</button>
+    </form>
   );
 }
