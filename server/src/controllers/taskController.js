@@ -1,9 +1,20 @@
 const Task = require("../models/task");
 const AuditLog = require("../models/auditLog");
 
+async function canAccessProject(userId, projectId) {
+  const p = await Project.findOne({
+    _id: projectId,
+    $or: [{ ownerId: userId }, { members: userId }],
+  });
+  return !!p;
+}
+
 exports.createTask = async (req, res) => {
   try {
     const { title, description, projectId, assignedTo, priority, dueDate } = req.body;
+
+    const ok = await canAccessProject(req.user.id, projectId);
+    if (!ok) return res.status(403).json({ msg: "Forbidden" });
 
     const task = new Task({
       title,
@@ -33,7 +44,12 @@ exports.createTask = async (req, res) => {
 
 exports.getTasks = async (req, res) => {
   try {
-    const tasks = await Task.find();
+    const projects = await Project.find({
+      $or: [{ ownerId: req.user.id }, { members: req.user.id }],
+    }).select("_id");
+
+    const projectIds = projects.map(p => p._id);
+    const tasks = await Task.find({ projectId: { $in: projectIds } }).sort({ updatedAt: -1 });
 
    
     await AuditLog.create({
@@ -75,7 +91,10 @@ exports.updateTaskStatus = async (req, res) => {
 exports.getTasksByProject = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const tasks = await Task.find({ projectId });
+    const ok = await canAccessProject(req.user.id, projectId);
+    if (!ok) return res.status(403).json({ msg: "Forbidden" });
+
+    const tasks = await Task.find({ projectId }).sort({ updatedAt: -1 });
 
 
     await AuditLog.create({

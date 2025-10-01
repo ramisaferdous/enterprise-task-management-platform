@@ -35,8 +35,7 @@ exports.getProjects = async (req, res) => {
   try {
     const projects = await Project.find({
       $or: [{ ownerId: req.user.id }, { members: req.user.id }],
-    });
-
+    }).sort({ updatedAt: -1 });
     
     await AuditLog.create({
       userId: req.user.id,
