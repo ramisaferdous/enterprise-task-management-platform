@@ -10,25 +10,62 @@ const schema = z.object({
 });
 
 export default function ProjectForm({ onCreate, creating }) {
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
-    resolver: zodResolver(schema),
-  });
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm({ resolver: zodResolver(schema) });
 
-  const submit = (d) => {
+  const submit = async (d) => {
     const members = d.members
-      ? d.members.split(",").map(s => Number(s.trim())).filter(Boolean)
+      ? d.members
+          .split(",")
+          .map((s) => Number(s.trim()))
+          .filter(Boolean)
       : [];
-    onCreate({ title: d.title, description: d.description || "", members })
-      .then(() => reset());
+    await onCreate({
+      title: d.title,
+      description: d.description || "",
+      members,
+    });
+    reset();
   };
 
   return (
-    <form onSubmit={handleSubmit(submit)} style={{ display:"grid", gap:8, marginBottom:16 }}>
-      <input placeholder="Project title" {...register("title")} />
-      {errors.title && <small style={{color:"crimson"}}>{errors.title.message}</small>}
-      <textarea placeholder="Description (optional)" rows={3} {...register("description")} />
-      <input placeholder="Members (user IDs, comma-separated)" {...register("members")} />
-      <button type="submit" disabled={creating}>{creating ? "Creating..." : "Create Project"}</button>
+    <form onSubmit={handleSubmit(submit)} className="grid" style={{ gap: 10 }}>
+      <div>
+        <label className="label">Project title</label>
+        <input className="input" placeholder="Project title" {...register("title")} />
+        {errors.title && (
+          <small style={{ color: "crimson" }}>{errors.title.message}</small>
+        )}
+      </div>
+
+      <div>
+        <label className="label">Description (optional)</label>
+        <textarea
+          className="textarea"
+          rows={3}
+          placeholder="What is this project about?"
+          {...register("description")}
+        />
+      </div>
+
+      <div>
+        <label className="label">Members (user IDs, comma-separated)</label>
+        <input
+          className="input"
+          placeholder="e.g. 2, 4, 8"
+          {...register("members")}
+        />
+      </div>
+
+      <div>
+        <button className="btn primary" type="submit" disabled={creating}>
+          {creating ? "Creating..." : "Create Project"}
+        </button>
+      </div>
     </form>
   );
 }

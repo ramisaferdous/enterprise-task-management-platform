@@ -35,3 +35,8 @@ export const loginApi = async ({ email, password }) => {
     throw new Error(err?.response?.data?.msg || "Invalid credentials");
   }
 };
+
+export const registerApi = async ({ name, email, password, role }) => {
+  const { data } = await api.post("/auth/register", { name, email, password, role });
+  return data;
+};

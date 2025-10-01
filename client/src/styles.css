@@ -62,7 +62,6 @@ a:hover { text-decoration: underline; }
 .btn.success{ background:var(--success); border-color:transparent; color:#fff }
 .btn.destructive{ background:var(--danger); border-color:transparent; color:#fff }
 
-/* === Inputs ============================================================= */
 .input, .select, .textarea{
   width:100%;
   background:#fff; color:#111827;

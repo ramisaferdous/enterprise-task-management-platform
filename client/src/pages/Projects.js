@@ -9,34 +9,70 @@ export default function Projects() {
   const qc = useQueryClient();
   const { user } = useAuth();
 
-  const { data: projects = [], isLoading } = useQuery("projects", getProjectsApi, { staleTime: 10000 });
+  const { data: projects = [], isLoading } = useQuery(
+    "projects",
+    getProjectsApi,
+    { staleTime: 10_000 }
+  );
 
   const createMutation = useMutation(createProjectApi, {
-    onSuccess: () => qc.invalidateQueries("projects")
+    onSuccess: () => qc.invalidateQueries("projects"),
   });
 
   const onCreate = (payload) => createMutation.mutateAsync(payload);
 
-  if (isLoading) return <p>Loading projects…</p>;
-
   return (
-    <div style={{ maxWidth: 800, margin: "20px auto", padding: "0 12px" }}>
-      <h2>Projects</h2>
-      {(user?.role === "admin" || user?.role === "manager") && (
-        <ProjectForm onCreate={onCreate} creating={createMutation.isLoading} />
-      )}
-      <div style={{ display:"grid", gap:10 }}>
-        {projects.map(p => (
-          <Link to={`/projects/${p._id}`} key={p._id} style={{ textDecoration:"none", color:"inherit" }}>
-            <div style={{ border:"1px solid #ddd", padding:12, borderRadius:8 }}>
-              <strong>{p.title}</strong>
-              <div><small>Owner: {p.ownerId}</small></div>
-              {p.description && <p style={{ marginTop:6 }}>{p.description}</p>}
-            </div>
-          </Link>
-        ))}
-        {projects.length === 0 && <p>No projects yet.</p>}
+    <div className="container">
+      {/* Page title */}
+      <div style={{ margin: "10px 0 18px" }}>
+        <h2 style={{ margin: 0 }}>Your Projects</h2>
+        <p className="muted" style={{ marginTop: 6 }}>
+          Projects you own or are a member of.
+        </p>
       </div>
+
+      {/* Create form for managers/admins */}
+      {(user?.role === "admin" || user?.role === "manager") && (
+        <div className="card" style={{ marginBottom: 18 }}>
+          <div style={{ marginBottom: 8, fontWeight: 600 }}>Create a project</div>
+          <ProjectForm onCreate={onCreate} creating={createMutation.isLoading} />
+        </div>
+      )}
+
+      {/* Projects grid */}
+      {isLoading ? (
+        <div className="card">Loading projects…</div>
+      ) : projects.length === 0 ? (
+        <div className="card">No projects yet.</div>
+      ) : (
+        <div className="grid cols-3">
+          {projects.map((p) => (
+            <Link
+              key={p._id}
+              to={`/projects/${p._id}`}
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <div className="card" style={{ height: "100%" }}>
+                <div className="row" style={{ justifyContent: "space-between" }}>
+                  <strong style={{ fontSize: 16 }}>{p.title}</strong>
+                  <span className="badge">
+                    {p.ownerId === user?.id ? "Owner: you" : `Owner: ${p.ownerId}`}
+                  </span>
+                </div>
+                {p.description && (
+                  <p className="muted" style={{ margin: "8px 0 0" }}>
+                    {p.description}
+                  </p>
+                )}
+                <hr className="sep" />
+                <div className="row">
+                  <span className="tag">Members: {p.members?.length ?? 0}</span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

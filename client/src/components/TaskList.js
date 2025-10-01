@@ -57,9 +57,14 @@ export default function TaskList({ projectId, canEdit }) {
     createTask.mutate({
       title: d.title,
       description: d.description || "",
-      projectId, 
+      projectId,
       priority: d.priority || "medium",
       dueDate: d.dueDate || null,
+      assignedTo: d.assignedTo ? Number(d.assignedTo) : undefined,
+      
+      dependencies: d.dependencies
+        ? d.dependencies.split(",").map(s => s.trim()).filter(Boolean)
+        : [],
     });
     reset();
   };
@@ -68,39 +73,69 @@ export default function TaskList({ projectId, canEdit }) {
   if (isError) return <p style={{ color: "crimson" }}>Error: {String(error)}</p>;
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div className="grid">
       {canEdit && projectId && (
-        <form onSubmit={handleSubmit(onCreate)} style={{ display: "grid", gap: 8 }}>
-          <input placeholder="Task title" {...register("title", { required: true })} />
-          <textarea placeholder="Description" rows={2} {...register("description")} />
-          <select {...register("priority")}>
-            <option>low</option>
-            <option>medium</option>
-            <option>high</option>
-          </select>
-          <input type="date" {...register("dueDate")} />
-          <button type="submit" disabled={createTask.isLoading}>
-            {createTask.isLoading ? "Creating…" : "Add Task"}
-          </button>
+        <form onSubmit={handleSubmit(onCreate)} className="grid card">
+          <h3 style={{ marginTop: 0 }}>Add task</h3>
+          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label className="label">Title</label>
+              <input className="input" {...register("title", { required: true })} />
+            </div>
+            <div>
+              <label className="label">Priority</label>
+              <select className="select" {...register("priority")}>
+                <option>low</option><option>medium</option><option>high</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Due date</label>
+              <input className="input" type="date" {...register("dueDate")} />
+            </div>
+            <div>
+              <label className="label">Assign to (User ID)</label>
+              <input className="input" placeholder="e.g. 1" {...register("assignedTo")} />
+            </div>
+          </div>
+          <div>
+            <label className="label">Description</label>
+            <textarea className="textarea" rows={3} {...register("description")} />
+          </div>
+          <div>
+            <label className="label">Dependencies (Task IDs, comma-separated)</label>
+            <input className="input" placeholder="e.g. 64f..., 64a..." {...register("dependencies")} />
+          </div>
+          <div className="row" style={{ justifyContent:"flex-end" }}>
+            <button className="btn primary" type="submit" disabled={createTask.isLoading}>
+              {createTask.isLoading ? "Creating…" : "Add Task"}
+            </button>
+          </div>
         </form>
       )}
 
-      {tasks.length === 0 && <p>No tasks yet.</p>}
+      {tasks.length === 0 && <div className="card">No tasks yet.</div>}
 
       {tasks.map((t) => (
-        <div key={t._id} style={{ border: "1px solid #ddd", padding: 10, borderRadius: 6 }}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div key={t._id} className="card">
+          <div className="row" style={{ justifyContent: "space-between" }}>
             <strong>{t.title}</strong>
             <small>{new Date(t.updatedAt).toLocaleString()}</small>
           </div>
-          {t.description && <p style={{ margin: "6px 0" }}>{t.description}</p>}
+          {t.description && <p style={{ margin: "6px 0", color:"#cbd5e1" }}>{t.description}</p>}
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span>
-              Priority: <b>{t.priority}</b>
-            </span>
-            <span>Status: </span>
+          <div className="row">
+            <span className="tag">Priority: {t.priority}</span>
+            {t.assignedTo ? <span className="tag">Assignee: {t.assignedTo}</span> : <span className="tag">Unassigned</span>}
+            {t.dueDate && <span className="tag">Due: {new Date(t.dueDate).toLocaleDateString()}</span>}
+          </div>
+
+          <hr className="sep" />
+
+          <div className="row" style={{ gap: 8 }}>
+            <span className="label" style={{ margin:0 }}>Status</span>
             <select
+              className="select"
+              style={{ width: 200 }}
               value={t.status}
               disabled={!canEdit || updateStatus.isLoading}
               onChange={(e) =>
@@ -111,11 +146,7 @@ export default function TaskList({ projectId, canEdit }) {
                 })
               }
             >
-              {statuses.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
+              {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
         </div>
