@@ -7,24 +7,25 @@ export default function Header() {
   const history = useHistory();
 
   return (
-    <header style={{ padding: 12, borderBottom: "1px solid #eee", display:"flex", justifyContent:"space-between" }}>
-      <Link to="/projects" style={{ textDecoration: "none" }}>
-        <strong>Enterprise Tasks</strong>
-      </Link>
-      <div>
-        {user ? (
-          <>
-            <span style={{ marginRight: 12 }}>
-              {(user.name || user.email || `User #${user.id}`)} ({user.role})
-            </span>
-            <button onClick={() => { logout(); history.push("/login"); }}>
-              Logout
-            </button>
-          </>
-        ) : (
-          <Link to="/login">Login</Link>
-        )}
+    <div className="header">
+      <div className="header-inner">
+        <Link className="brand" to="/">Enterprise Tasks</Link>
+
+        <nav className="nav">
+          <Link to="/projects">Projects</Link>
+          {!user && <Link to="/login">Login</Link>}
+          {!user && <Link to="/register">Register</Link>}
+          {user && (
+            <>
+              <span className="badge">{user.name} · {user.role}</span>
+              <button className="btn secondary" style={{ marginLeft: 10 }}
+                onClick={() => { logout(); history.push("/"); }}>
+                Logout
+              </button>
+            </>
+          )}
+        </nav>
       </div>
-    </header>
+    </div>
   );
 }

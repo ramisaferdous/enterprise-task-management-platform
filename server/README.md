@@ -53,13 +53,13 @@ The server-side is built with Node.js and Express, handling the backend logic an
 1. Start the server:
    ```
    cd server
-   npm start
+   docker compose up -d server  
    ```
 
 2. Start the client:
    ```
    cd ../client
-   npm start
+   node app.js
    ```
 
 The application should now be running on `http://localhost:3000` for the client and `http://localhost:5000` for the server.
