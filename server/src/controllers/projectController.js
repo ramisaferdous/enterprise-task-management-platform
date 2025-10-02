@@ -1,31 +1,31 @@
+// src/controllers/projectController.js
 const Project = require("../models/project");
-const Task = require("../models/task")
-const AuditLog = require('../models/auditLog');
-
+const Task = require("../models/task");
+const AuditLog = require("../models/auditLog");
 
 exports.createProject = async (req, res) => {
   try {
-    const { title, description, members,firstTask } = req.body;
+    const { title, description, members, firstTask } = req.body;
 
-    const project = new Project({
+    const project = await Project.create({
       title,
       description,
-      ownerId: req.user.id,
+      ownerId: Number(req.user.id),
       members: Array.isArray(members) ? members : [],
     });
 
-    await project.save();
+    const projIdStr = project._id.toString();
 
-    
     await AuditLog.create({
-      userId: req.user.id,
-      action: 'CREATE',
-      entity: 'Project',
-      entityId: String(project._id),
-      details: { title, description } 
+      userId: Number(req.user.id),
+      action: "CREATE",
+      entity: "Project",
+      entityId: projIdStr,                  // ✅ STRING ONLY
+      details: { title, description },
     });
 
-    if (firstTask && firstTask.title) {
+    // optional first task
+    if (firstTask?.title) {
       const t = await Task.create({
         title: firstTask.title,
         description: firstTask.description || "",
@@ -35,11 +35,11 @@ exports.createProject = async (req, res) => {
       });
 
       await AuditLog.create({
-        userId: req.user.id,
+        userId: Number(req.user.id),
         action: "CREATE",
         entity: "Task",
-        entityId: String(t._id),         // <—
-        details: { title: t.title, projectId: String(project._id) },
+        entityId: t._id.toString(),         // ✅ STRING ONLY
+        details: { title: t.title, projectId: projIdStr },
       });
     }
 
@@ -50,16 +50,14 @@ exports.createProject = async (req, res) => {
   }
 };
 
-
-
 exports.getProjects = async (req, res) => {
   try {
     const projects = await Project.find({
-      $or: [{ ownerId: req.user.id }, { members: req.user.id }],
+      $or: [{ ownerId: Number(req.user.id) }, { members: Number(req.user.id) }],
     }).sort({ updatedAt: -1 });
-    
+
     await AuditLog.create({
-      userId: req.user.id,
+      userId: Number(req.user.id),
       action: "READ",
       entity: "Project",
       details: { count: projects.length },
@@ -67,6 +65,7 @@ exports.getProjects = async (req, res) => {
 
     res.json(projects);
   } catch (err) {
+    console.error("getProjects error:", err);
     res.status(500).json({ msg: "Error fetching projects", error: err.message });
   }
 };

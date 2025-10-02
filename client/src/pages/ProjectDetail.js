@@ -66,6 +66,7 @@ export default function ProjectDetail() {
               placeholder="Task title"
               value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+              required
             />
             <select
               value={draft.priority}

@@ -15,13 +15,13 @@ const sequelize = new Sequelize(pgDb, pgUser, pgPass, {
 });
 
 const connectSQL = async (retries = 12, delayMs = 2500) => {
-  // Log what we’re trying (no secrets)
+ 
   console.log(`Trying Postgres @ ${pgHost}:${pgPort}/${pgDb} as ${pgUser}`);
   while (retries) {
     try {
       await sequelize.authenticate();
       console.log("Postgres connected");
-      await sequelize.sync(); // { alter:true } only for dev
+      await sequelize.sync(); 
       console.log("Postgres synced");
       return;
     } catch (e) {

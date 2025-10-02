@@ -9,7 +9,7 @@ const TaskSchema = new Schema(
     status: { type: String, enum: ["todo", "in-progress", "done"], default: "todo" },
     priority: { type: String, enum: ["low", "medium", "high"], default: "medium" },
     dueDate: Date,
-    assignedTo: Number,          // if you store Postgres user ids as numbers
+    assignedTo: Number,                            // PG user id
     dependencies: [{ type: Types.ObjectId, ref: "Task" }],
   },
   { timestamps: true }

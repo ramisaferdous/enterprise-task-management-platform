@@ -1,18 +1,10 @@
+// src/routes/projectRoutes.js
 const router = require("express").Router();
-const auth = require("../middlewares/authMiddleware"); // this exports a function
-const {
-  createTask,
-  getTasks,
-  updateTaskStatus,
-  getTasksByProject,
-} = require("../controllers/taskController");
+const auth = require("../middlewares/authMiddleware");
+const { createProject, getProjects } = require("../controllers/projectController");
 
-// protect everything under /api/tasks
 router.use(auth());
-
-router.post("/", createTask);
-router.get("/", getTasks);
-router.get("/project/:projectId", getTasksByProject);
-router.patch("/:id/status", updateTaskStatus);
+router.post("/", createProject);
+router.get("/", getProjects);
 
 module.exports = router;
