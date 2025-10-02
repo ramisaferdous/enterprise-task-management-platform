@@ -1,57 +1,42 @@
-const mongoose = require("mongoose");
-const Task = require("../models/task");
-const Project = require("../models/project");
-const AuditLog = require("../models/auditLog"); // keep if you have it
 
-const { isValidObjectId, Types } = mongoose;
+const Task = require("../models/task");
+const AuditLog = require("../models/auditLog");
+const Project = require("../models/project"); 
+
 
 async function canAccessProject(userId, projectId) {
-  if (!isValidObjectId(projectId)) return false;
-
- 
-  return !!(await Project.findOne({
+  const p = await Project.findOne({
     _id: projectId,
     $or: [{ ownerId: userId }, { members: userId }],
-  }).select("_id"));
+  });
+  return !!p;
 }
-
 
 exports.createTask = async (req, res) => {
   try {
-    const { title, description, projectId, assignedTo, priority, dueDate, dependencies } = req.body;
+    const { title, description, projectId, assignedTo, priority, dueDate, dependencies = [] } = req.body;
 
-    if (!title || !projectId) {
-      return res.status(400).json({ msg: "title and projectId are required" });
+    if (!(await canAccessProject(req.user.id, projectId))) {
+      return res.status(403).json({ msg: "Forbidden" });
     }
-    if (!isValidObjectId(projectId)) {
-      return res.status(400).json({ msg: "Invalid projectId" });
-    }
-    const allowed = await canAccessProject(req.user.id, projectId);
-    if (!allowed) return res.status(403).json({ msg: "Forbidden" });
 
-    const task = new Task({
-      title: String(title).trim(),
-      description: description || "",
-      projectId: projectId,                          // valid ObjectId string
-      assignedTo: assignedTo ? Number(assignedTo) : undefined,
-      priority: ["low", "medium", "high"].includes(priority) ? priority : "medium",
-      dueDate: dueDate ? new Date(dueDate) : undefined,
-      dependencies: Array.isArray(dependencies)
-        ? dependencies.filter(isValidObjectId).map((id) => Types.ObjectId(id))
-        : [],
+    const task = await Task.create({
+      title,
+      description,
+      projectId,
+      assignedTo,
+      priority,
+      dueDate,
+      dependencies,
     });
 
-    await task.save();
-
-    try {
-      await AuditLog.create({
-        userId: req.user.id,
-        action: "CREATE",
-        entity: "Task",
-        entityId: task._id,
-        details: { title: task.title, projectId: task.projectId, assignedTo: task.assignedTo },
-      });
-    } catch (_) { }
+    await AuditLog.create({
+      userId: req.user.id,
+      action: "CREATE",
+      entity: "Task",
+      entityId: String(task._id),   // 🔧
+      details: { title, projectId: String(projectId), assignedTo },
+    });
 
     res.status(201).json(task);
   } catch (err) {
@@ -60,65 +45,21 @@ exports.createTask = async (req, res) => {
   }
 };
 
-
-exports.getTasks = async (req, res) => {
-  try {
-    const projects = await Project.find({
-      $or: [{ ownerId: req.user.id }, { members: req.user.id }],
-    }).select("_id");
-
-    const projectIds = projects.map((p) => p._id);
-    const tasks = await Task.find({ projectId: { $in: projectIds } })
-      .sort({ updatedAt: -1 });
-
-    try {
-      await AuditLog.create({
-        userId: req.user.id,
-        action: "READ",
-        entity: "Task",
-        details: { count: tasks.length },
-      });
-    } catch (_) {  }
-
-    res.json(tasks);
-  } catch (err) {
-    console.error("getTasks error:", err);
-    res.status(500).json({ msg: "Error fetching tasks", error: err.message });
-  }
-};
-
-
 exports.updateTaskStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!isValidObjectId(id)) {
-      return res.status(400).json({ msg: "Invalid task id" });
-    }
-    if (!["todo", "in-progress", "done"].includes(status)) {
-      return res.status(400).json({ msg: "Invalid status" });
-    }
-
-    const task = await Task.findById(id);
+    const task = await Task.findByIdAndUpdate(id, { status }, { new: true });
     if (!task) return res.status(404).json({ msg: "Task not found" });
 
-    
-    const allowed = await canAccessProject(req.user.id, task.projectId);
-    if (!allowed) return res.status(403).json({ msg: "Forbidden" });
-
-    task.status = status;
-    await task.save();
-
-    try {
-      await AuditLog.create({
-        userId: req.user.id,
-        action: "UPDATE_STATUS",
-        entity: "Task",
-        entityId: task._id,
-        details: { newStatus: status },
-      });
-    } catch (_) { /* optional */ }
+    await AuditLog.create({
+      userId: req.user.id,
+      action: "UPDATE_STATUS",
+      entity: "Task",
+      entityId: String(task._id),   
+      details: { newStatus: status },
+    });
 
     res.json(task);
   } catch (err) {
@@ -127,31 +68,51 @@ exports.updateTaskStatus = async (req, res) => {
   }
 };
 
+exports.getTasks = async (req, res) => {
+  try {
+   
+    const projects = await Project.find({
+      $or: [{ ownerId: req.user.id }, { members: req.user.id }],
+    }).select("_id");
+
+    const ids = projects.map(p => p._id);
+    const tasks = await Task.find({ projectId: { $in: ids } })
+      .sort({ updatedAt: -1 });
+
+    await AuditLog.create({
+      userId: req.user.id,
+      action: "READ",
+      entity: "Task",
+      details: { count: tasks.length },
+    });
+
+    res.json(tasks);
+  } catch (err) {
+    console.error("getTasks error:", err);
+    res.status(500).json({ msg: "Error fetching tasks" });
+  }
+};
 
 exports.getTasksByProject = async (req, res) => {
   try {
     const { projectId } = req.params;
-
-    if (!isValidObjectId(projectId)) {
-      return res.status(400).json({ msg: "Invalid projectId" });
+    if (!(await canAccessProject(req.user.id, projectId))) {
+      return res.status(403).json({ msg: "Forbidden" });
     }
-    const allowed = await canAccessProject(req.user.id, projectId);
-    if (!allowed) return res.status(403).json({ msg: "Forbidden" });
-
     const tasks = await Task.find({ projectId }).sort({ updatedAt: -1 });
 
-    try {
-      await AuditLog.create({
-        userId: req.user.id,
-        action: "READ",
-        entity: "Task",
-        details: { projectId, count: tasks.length },
-      });
-    } catch (_) { }
+    await AuditLog.create({
+      userId: req.user.id,
+      action: "READ",
+      entity: "Task",
+      details: { projectId, count: tasks.length },
+    });
 
     res.json(tasks);
   } catch (err) {
     console.error("getTasksByProject error:", err);
-    res.status(500).json({ msg: "Error fetching tasks", error: err.message });
+    res.status(500).json({ msg: "Error fetching tasks" });
   }
 };
+
+

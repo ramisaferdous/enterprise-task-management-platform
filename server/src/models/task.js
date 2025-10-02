@@ -1,42 +1,18 @@
-const mongoose = require("mongoose");
+// src/models/task.js
+const { Schema, model, Types } = require("mongoose");
 
-const taskSchema = new mongoose.Schema(
+const TaskSchema = new Schema(
   {
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    title: { type: String, required: true },
     description: String,
-    projectId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Project",
-      required: true,
-    },
-    assignedTo: {
-      type: Number,
-    },
-    priority: {
-      type: String,
-      enum: ["low", "medium", "high"],
-      default: "medium",
-    },
-    status: {
-      type: String,
-      enum: ["todo", "in-progress", "done"],
-      default: "todo",
-    },
-    dependencies: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Task",
-      },
-    ],
+    projectId: { type: Types.ObjectId, ref: "Project", required: true },
+    status: { type: String, enum: ["todo", "in-progress", "done"], default: "todo" },
+    priority: { type: String, enum: ["low", "medium", "high"], default: "medium" },
     dueDate: Date,
+    assignedTo: Number,          // if you store Postgres user ids as numbers
+    dependencies: [{ type: Types.ObjectId, ref: "Task" }],
   },
   { timestamps: true }
 );
 
-const Task = mongoose.model("Task", taskSchema);
-
-module.exports = Task;
+module.exports = model("Task", TaskSchema);

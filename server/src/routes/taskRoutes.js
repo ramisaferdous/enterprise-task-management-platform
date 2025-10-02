@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const authMiddleware = require("../middlewares/authMiddleware");
+const auth = require("../middlewares/authMiddleware"); // this exports a function
 const {
   createTask,
   getTasks,
@@ -7,13 +7,12 @@ const {
   getTasksByProject,
 } = require("../controllers/taskController");
 
+// protect everything under /api/tasks
+router.use(auth());
 
-router.use(authMiddleware());  
-
+router.post("/", createTask);
 router.get("/", getTasks);
 router.get("/project/:projectId", getTasksByProject);
-router.post("/", createTask);
 router.patch("/:id/status", updateTaskStatus);
-
 
 module.exports = router;
