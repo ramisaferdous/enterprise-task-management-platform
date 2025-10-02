@@ -40,12 +40,13 @@ export default function TaskList({ projectId, canEdit }) {
   const keyFor = (pid) => (pid ? ["tasks", "project", pid] : ["tasks", "all"]);
   const fetcher = () => (projectId ? getTasksByProjectidApi(projectId) : getTasksApi());
 
-  const {
-    data: tasks = [],
-    isLoading,
-    isError,
-    error,
-  } = useQuery(keyFor(projectId), fetcher, { staleTime: 10000 });
+ const {
+  data: tasks = [],
+  isLoading,
+  isError,
+  error,
+} = useQuery(keyFor(projectId), fetcher, { staleTime: 10000 });
+
 
   // optimistic status updates
   const updateStatus = useMutation(updateTaskStatusApi, {

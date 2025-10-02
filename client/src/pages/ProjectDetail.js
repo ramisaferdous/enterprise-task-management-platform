@@ -61,39 +61,68 @@ export default function ProjectDetail() {
 
       {showAdd && canEdit && (
         <form onSubmit={onAdd} className="card" style={{ marginTop: 12 }}>
-          <div className="row">
-            <input
-              placeholder="Task title"
-              value={draft.title}
-              onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-              required
-            />
-            <select
-              value={draft.priority}
-              onChange={(e) => setDraft((d) => ({ ...d, priority: e.target.value }))}
-            >
-              <option>low</option>
-              <option>medium</option>
-              <option>high</option>
-            </select>
-            <input
-              type="date"
-              value={draft.dueDate}
-              onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))}
+          <div className="row" style={{ gap: 12 }}>
+            {/* Task title input */}
+            <div style={{ flex: 1 }}>
+              <label className="label">Task Title</label>
+              <input
+                className="input"
+                type="text"
+                placeholder="Task Title"
+                value={draft.title}
+                onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+                required
+              />
+            </div>
+
+            {/* Priority dropdown */}
+            <div style={{ flex: 1 }}>
+              <label className="label">Priority</label>
+              <select
+                className="select"
+                value={draft.priority}
+                onChange={(e) => setDraft((d) => ({ ...d, priority: e.target.value }))}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Due date input */}
+          <div className="row" style={{ gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label className="label">Due Date</label>
+              <input
+                className="input"
+                type="date"
+                value={draft.dueDate}
+                onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          {/* Description input */}
+          <div className="fullCol">
+            <label className="label">Description</label>
+            <textarea
+              className="textarea"
+              rows={3}
+              placeholder="Description (optional)"
+              value={draft.description}
+              onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
             />
           </div>
-          <textarea
-            rows={2}
-            placeholder="Description (optional)"
-            value={draft.description}
-            onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-          />
+
+          {/* Submit button */}
           <button className="btn-primary" disabled={createTask.isLoading}>
             {createTask.isLoading ? "Adding..." : "Add Task"}
           </button>
         </form>
       )}
 
+      {/* Task List */}
       <TaskList projectId={id} canEdit={canEdit} />
     </div>
   );

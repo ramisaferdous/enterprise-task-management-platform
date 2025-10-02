@@ -112,7 +112,8 @@ exports.getTasksByProject = async (req, res) => {
       userId: Number(req.user.id),
       action: "READ",
       entity: "Task",
-      details: { projectId: String(projectId), count: tasks.length },
+      entityId: projectId.toString(),       
+      details: { projectId: projectId.toString(), count: tasks.length },
     });
 
     res.json(tasks);
